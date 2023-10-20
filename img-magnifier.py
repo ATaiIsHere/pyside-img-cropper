@@ -1,42 +1,11 @@
-from PySide6.QtWidgets import QWidget, QApplication, QLabel, QScrollArea, QFrame, QGridLayout
-from PySide6.QtCore import QRect, Qt, QSize, Signal, QPointF, Slot, QPoint
+from PySide6.QtWidgets import QWidget, QApplication, QLabel, QScrollArea, QFrame, QGridLayout, QStyle
+from PySide6.QtCore import QRect, Qt, QSize, Signal, QPointF, Slot, QPoint, QEvent
 from PySide6.QtGui import QPixmap, QCursor, QMouseEvent, QColor
+import PySide6
 import numpy as np
 import sys
 from typing import List
-
-
-class PixBrowser(QFrame):
-    def __init__(self, n: int, *args):
-        super().__init__(*args)
-        self.setFrameStyle(1)
-        self.setLineWidth(1)
-        self.setMidLineWidth(1)
-
-        layout = QGridLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.frames_list: List[List[QFrame | None]] = [[None] * n for _ in range(n)]
-
-        for h in range(n):
-            for w in range(n):
-                frame = QFrame()
-                frame.setFrameStyle(1)
-                frame.setLineWidth(1)
-                self.frames_list[h][w] = frame
-                layout.addWidget(frame, w, h)
-
-        self.setLayout(layout)
-
-    def set_pixmap(self, pixmap: QPixmap):
-        image = pixmap.toImage()
-        (w, h) = image.size().toTuple()
-        img_arr = np.array(image.bits()).reshape((h, w, 4))
-
-        for i in range(h):
-            for j in range(w):
-                (b, g, r, _) = img_arr[i][j]
-                self.frames_list[i][j].setStyleSheet(f'background-color: rgb{(r, g, b)}')
+from pix_browser import PixBrowser
 
 
 class ImgContainer(QLabel):
@@ -50,7 +19,7 @@ class ImgContainer(QLabel):
         point = ev.position().toPoint()
         (x, y) = point.toTuple()
         color = self.pixmap().toImage().pixelColor(x, y)
-        part = self.pixmap().copy(x - 7, y - 7, 15, 15)
+        part = self.pixmap().copy(x - 7, y - 7, 11, 11)
         self.mouseMoved.emit(point, color, part)
 
 
@@ -77,15 +46,26 @@ class ImgMagnifier(QWidget):
         self.label1 = QLabel('Position', self)
         self.label1.setGeometry(600, 60, 200, 200)
 
-        self.frame = PixBrowser(15, self)
+        self.frame = PixBrowser(self)
         self.frame.setGeometry(600, 260, 150, 150)
         self.frame.setStyleSheet('background-color: rgb(210,210,210)')
 
-    @Slot(QPointF)
+    @Slot()
     def update_label(self, point: QPoint, color: QColor, part: QPixmap):
         self.label.setText(f'{point.toTuple()} {color.getRgb()}')
         self.label1.setPixmap(part)
         self.frame.set_pixmap(part)
+
+    # def event(self, event: PySide6.QtCore.QEvent) -> bool:
+    #     print('test', event.type())
+    #     print(2, event)
+    #
+    #     return QWidget.event(self, event)
+    #
+    # def eventFilter(self, watched: PySide6.QtCore.QObject, event: PySide6.QtCore.QEvent) -> bool:
+    #     print(watched, event)
+    #     if watched == self.scroll_area and event.type() == QEvent.Type.KeyPress:
+    #         return True
 
 
 if __name__ == '__main__':
